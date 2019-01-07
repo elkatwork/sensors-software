@@ -29,6 +29,7 @@ const char INTL_BMP180[] PROGMEM = "BMP180 ({t}, {p})";
 const char INTL_BMP280[] PROGMEM = "BMP280 ({t}, {p})";
 const char INTL_BME280[] PROGMEM = "BME280 ({t}, {h}, {p})";
 const char INTL_DS18B20[] PROGMEM = "DS18B20 ({t})";
+const char INTL_SHT1X[] PROGMEM = "SHT1X ({t}, {h})";
 const char INTL_NEO6M[] PROGMEM = "GPS (NEO 6M)";
 const char INTL_BASICAUTH[] PROGMEM = "Pøihlášení (heslem)";
 const char INTL_FS_WIFI[] PROGMEM = "Wi-Fi modul";

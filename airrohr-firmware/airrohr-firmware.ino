@@ -126,6 +126,7 @@
 #include <Adafruit_BMP280.h>
 #include <Adafruit_BME280.h>
 #include <DallasTemperature.h>
+#include <SHT1x.h>
 #include <TinyGPS++.h>
 #include <time.h>
 #include <coredecls.h>
@@ -207,6 +208,7 @@ namespace cfg {
 	bool bmp280_read = BMP280_READ;
 	bool bme280_read = BME280_READ;
 	bool ds18b20_read = DS18B20_READ;
+	bool sht1x_read = SHT1X_READ;
 	bool gps_read = GPS_READ;
 	bool send2dusti = SEND2DUSTI;
 	bool send2madavi = SEND2MADAVI;
@@ -348,6 +350,11 @@ DallasTemperature ds18b20(&oneWire);
 TinyGPSPlus gps;
 
 /*****************************************************************
+ * GPS declaration                                               *
+ *****************************************************************/
+SHT1x sht1x(I2C_PIN_SDA, I2C_PIN_SCL);
+
+/*****************************************************************
  * Variable Definitions for PPD24NS                              *
  * P1 for PM10 & P2 for PM25                                     *
  *****************************************************************/
@@ -429,6 +436,8 @@ double last_value_BME280_T = -128.0;
 double last_value_BME280_H = -1.0;
 double last_value_BME280_P = -1.0;
 double last_value_DS18B20_T = -1.0;
+double last_value_SHT1X_T = -128.0;
+double last_value_SHT1X_H = -1.0;
 double last_value_GPS_lat = -200.0;
 double last_value_GPS_lon = -200.0;
 double last_value_GPS_alt = -1000.0;
@@ -885,6 +894,7 @@ void readConfig() {
 					setFromJSON(bmp280_read);
 					setFromJSON(bme280_read);
 					setFromJSON(ds18b20_read);
+					setFromJSON(sht1x_read);
 					setFromJSON(gps_read);
 					setFromJSON(send2dusti);
 					setFromJSON(ssl_dusti);
@@ -974,6 +984,7 @@ void writeConfig() {
 	copyToJSON_Bool(bmp280_read);
 	copyToJSON_Bool(bme280_read);
 	copyToJSON_Bool(ds18b20_read);
+	copyToJSON_Bool(sht1x_read);
 	copyToJSON_Bool(gps_read);
 	copyToJSON_Bool(send2dusti);
 	copyToJSON_Bool(ssl_dusti);
@@ -1386,6 +1397,7 @@ void webserver_config() {
 			page_content += form_checkbox_sensor("bmp280_read", FPSTR(INTL_BMP280), bmp280_read);
 			page_content += form_checkbox_sensor("bme280_read", FPSTR(INTL_BME280), bme280_read);
 			page_content += form_checkbox_sensor("ds18b20_read", FPSTR(INTL_DS18B20), ds18b20_read);
+			page_content += form_checkbox_sensor("sht1x_read", FPSTR(INTL_SHT1X), sht1x_read);
 			page_content += form_checkbox("gps_read", FPSTR(INTL_NEO6M), gps_read);
 			page_content += F("<br/><br/>\n<b>");
 		}
@@ -1510,6 +1522,7 @@ void webserver_config() {
 			readBoolParam(bmp280_read);
 			readBoolParam(bme280_read);
 			readBoolParam(ds18b20_read);
+			readBoolParam(sht1x_read);
 			readBoolParam(gps_read);
 
 			readIntParam(debug);
@@ -1565,6 +1578,7 @@ void webserver_config() {
 		page_content += line_from_value(tmpl(FPSTR(INTL_READ_FROM), "BMP280"), String(bmp280_read));
 		page_content += line_from_value(tmpl(FPSTR(INTL_READ_FROM), "BME280"), String(bme280_read));
 		page_content += line_from_value(tmpl(FPSTR(INTL_READ_FROM), "DS18B20"), String(ds18b20_read));
+		page_content += line_from_value(tmpl(FPSTR(INTL_READ_FROM), "SHT1X"), String(sht1x_read));
 		page_content += line_from_value(tmpl(FPSTR(INTL_READ_FROM), "GPS"), String(gps_read));
 		page_content += line_from_value(FPSTR(INTL_AUTO_UPDATE), String(auto_update));
 		page_content += line_from_value(FPSTR(INTL_USE_BETA), String(use_beta));
@@ -1744,6 +1758,11 @@ void webserver_values() {
 		if (cfg::ds18b20_read) {
 			page_content += FPSTR(EMPTY_ROW);
 			page_content += table_row_from_value(FPSTR(SENSORS_DS18B20), FPSTR(INTL_TEMPERATURE), check_display_value(last_value_DS18B20_T, -128, 1, 0), unit_T);
+		}
+		if (cfg::sht1x_read) {
+			page_content += FPSTR(EMPTY_ROW);
+			page_content += table_row_from_value(FPSTR(SENSORS_SHT1X), FPSTR(INTL_TEMPERATURE), check_display_value(last_value_SHT1X_T, -128, 1, 0), unit_T);
+			page_content += table_row_from_value(FPSTR(SENSORS_SHT1X), FPSTR(INTL_HUMIDITY), check_display_value(last_value_SHT1X_H, -1, 1, 0), unit_H);
 		}
 		if (cfg::gps_read) {
 			page_content += FPSTR(EMPTY_ROW);
@@ -2084,6 +2103,8 @@ void wifiConfig() {
 	debug_out(String(cfg::htu21d_read), DEBUG_MIN_INFO, 1);
 	debug_out(F("BMP: "), DEBUG_MIN_INFO, 0);
 	debug_out(String(cfg::bmp_read), DEBUG_MIN_INFO, 1);
+	debug_out(F("SHT1X:"), DEBUG_MIN_INFO, 0);
+	debug_out(String(cfg::sht1x_read), DEBUG_MIN_INFO, 1);
 	debug_out(F("----\nSend to ..."), DEBUG_MIN_INFO, 1);
 	debug_out(F("Dusti: "), DEBUG_MIN_INFO, 0);
 	debug_out(String(cfg::send2dusti), DEBUG_MIN_INFO, 1);
@@ -2554,6 +2575,35 @@ static String sensorDS18B20() {
 	}
 	debug_out("----", DEBUG_MIN_INFO, 1);
 	debug_out(String(FPSTR(DBG_TXT_END_READING)) + FPSTR(SENSORS_DS18B20), DEBUG_MED_INFO, 1);
+
+	return s;
+}
+
+/*****************************************************************
+ * read SHT1X sensor values                                    *
+ *****************************************************************/
+static String sensorSHT1X() {
+	String s;
+	debug_out(String(FPSTR(DBG_TXT_START_READING)) + FPSTR(SENSORS_SHT1X), DEBUG_MED_INFO, 1);
+
+	const auto t = sht1x.readTemperatureC();
+	const auto h = sht1x.readHumidity();
+	if (isnan(t) || isnan(h) ) {
+		last_value_SHT1X_T = -128.0;
+		last_value_SHT1X_H = -1.0;
+		debug_out(String(FPSTR(SENSORS_SHT1X)) + FPSTR(DBG_TXT_COULDNT_BE_READ), DEBUG_ERROR, 1);
+	} else {
+		debug_out(FPSTR(DBG_TXT_TEMPERATURE), DEBUG_MIN_INFO, 0);
+		debug_out(Float2String(t) + " C", DEBUG_MIN_INFO, 1);
+		debug_out(FPSTR(DBG_TXT_HUMIDITY), DEBUG_MIN_INFO, 0);
+		debug_out(Float2String(h) + " %", DEBUG_MIN_INFO, 1);
+		last_value_SHT1X_T = t;
+		last_value_SHT1X_H = h;
+		s += Value2Json(F("SHT1X_temperature"), Float2String(last_value_SHT1X_T));
+		s += Value2Json(F("SHT1X_humidity"), Float2String(last_value_SHT1X_H));
+	}
+	debug_out("----", DEBUG_MIN_INFO, 1);
+	debug_out(String(FPSTR(DBG_TXT_END_READING)) + FPSTR(SENSORS_SHT1X), DEBUG_MED_INFO, 1);
 
 	return s;
 }
@@ -3325,6 +3375,12 @@ void display_values() {
 		p_value = last_value_BME280_P;
 		p_sensor = FPSTR(SENSORS_BME280);
 	}
+	if (cfg::sht1x_read) {
+		t_value = last_value_SHT1X_T;
+		t_sensor = FPSTR(SENSORS_SHT1X);
+		h_value = last_value_SHT1X_H;
+		h_sensor = FPSTR(SENSORS_SHT1X);
+	}
 	if (cfg::gps_read) {
 		lat_value = last_value_GPS_lat;
 		lon_value = last_value_GPS_lon;
@@ -3334,7 +3390,7 @@ void display_values() {
 	if (cfg::ppd_read || cfg::pms_read || cfg::hpm_read || cfg::sds_read) {
 		screens[screen_count++] = 1;
 	}
-	if (cfg::dht_read || cfg::ds18b20_read || cfg::htu21d_read || cfg::bmp_read || cfg::bmp280_read || cfg::bme280_read) {
+	if (cfg::dht_read || cfg::ds18b20_read || cfg::htu21d_read || cfg::bmp_read || cfg::bmp280_read || cfg::bme280_read || cfg::sht1x_read) {
 		screens[screen_count++] = 2;
 	}
 	if (cfg::gps_read) {
@@ -3830,6 +3886,7 @@ void loop() {
 	String result_BMP280 = "";
 	String result_BME280 = "";
 	String result_DS18B20 = "";
+	String result_SHT1X = "";
 	String result_GPS = "";
 
 	unsigned long sum_send_time = 0;
@@ -3910,6 +3967,11 @@ void loop() {
 		if (cfg::ds18b20_read) {
 			debug_out(String(FPSTR(DBG_TXT_CALL_SENSOR)) + FPSTR(SENSORS_DS18B20), DEBUG_MAX_INFO, 1);
 			result_DS18B20 = sensorDS18B20();               // getting temperature (optional)
+		}
+
+		if (cfg::sht1x_read) {
+			debug_out(String(FPSTR(DBG_TXT_CALL_SENSOR)) + FPSTR(SENSORS_SHT1X), DEBUG_MAX_INFO, 1);
+			result_SHT1X = sensorSHT1X();                       // getting temperature and humidity (optional)
 		}
 	}
 
@@ -4030,6 +4092,16 @@ void loop() {
 				debug_out(String(FPSTR(DBG_TXT_SENDING_TO_LUFTDATEN)) + F("(DS18B20): "), DEBUG_MIN_INFO, 1);
 				start_send = millis();
 				sendLuftdaten(result_DS18B20, DS18B20_API_PIN, HOST_DUSTI, HTTP_PORT_DUSTI, URL_DUSTI, true, "DS18B20_");
+				sum_send_time += millis() - start_send;
+			}
+		}
+
+		if (cfg::sht1x_read) {
+			data += result_SHT1X;
+			if (cfg::send2dusti) {
+				debug_out(String(FPSTR(DBG_TXT_SENDING_TO_LUFTDATEN)) + F("(SHT1X): "), DEBUG_MIN_INFO, 1);
+				start_send = millis();
+				sendLuftdaten(result_SHT1X, SHT1X_API_PIN, HOST_DUSTI, HTTP_PORT_DUSTI, URL_DUSTI, true, "SHT1X_");
 				sum_send_time += millis() - start_send;
 			}
 		}

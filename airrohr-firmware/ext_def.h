@@ -123,13 +123,16 @@
 #define DS18B20_READ 0
 #define DS18B20_API_PIN 13
 
+// SHT1x, temperature, humidity
+#define SHT1X_READ 0
+#define SHT1X_API_PIN 255
 
 // GPS, bevorzugt Neo-6M
 #define GPS_READ 0
 #define GPS_API_PIN 9
 
 // automatic firmware updates
-#define AUTO_UPDATE 1
+#define AUTO_UPDATE 0
 
 // use beta firmware
 #define USE_BETA 0
