@@ -2599,8 +2599,8 @@ static String sensorSHT1X() {
 		debug_out(Float2String(h) + " %", DEBUG_MIN_INFO, 1);
 		last_value_SHT1X_T = t;
 		last_value_SHT1X_H = h;
-		s += Value2Json(F("SHT1X_temperature"), Float2String(last_value_SHT1X_T));
-		s += Value2Json(F("SHT1X_humidity"), Float2String(last_value_SHT1X_H));
+		s += Value2Json(F("temperature"), Float2String(last_value_SHT1X_T));
+		s += Value2Json(F("humidity"), Float2String(last_value_SHT1X_H));
 	}
 	debug_out("----", DEBUG_MIN_INFO, 1);
 	debug_out(String(FPSTR(DBG_TXT_END_READING)) + FPSTR(SENSORS_SHT1X), DEBUG_MED_INFO, 1);
