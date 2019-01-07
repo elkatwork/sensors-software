@@ -125,7 +125,7 @@
 
 // SHT1x, temperature, humidity
 #define SHT1X_READ 0
-#define SHT1X_API_PIN 255
+#define SHT1X_API_PIN 7
 
 // GPS, bevorzugt Neo-6M
 #define GPS_READ 0
